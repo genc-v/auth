@@ -18,21 +18,19 @@ public class JwtTokenProvider : IJwtTokenProvider
         _jwtSettings = jwtSettings;
     }
 
-    public string GenerateToken(string email, string id, bool isAdmin)
+    public string GenerateToken(string email, string id, IEnumerable<string> roles)
     {
         SymmetricSecurityKey securityKey = new(Encoding.UTF8.GetBytes(_jwtSettings.Secret));
         SigningCredentials credentials = new(securityKey, SecurityAlgorithms.HmacSha256);
 
-        List<Claim> claims = new()
-        {
-            new Claim(JwtRegisteredClaimNames.Sub, id), new Claim(JwtRegisteredClaimNames.Email, email)
-        };
+        List<Claim> claims =
+        [
+            new Claim(JwtRegisteredClaimNames.Sub, id),
+            new Claim(JwtRegisteredClaimNames.Email, email)
+        ];
 
-        string role = "user";
-
-        if (isAdmin) role = "admin";
-
-        claims.Add(new Claim(ClaimTypes.Role, role));
+        foreach (string role in roles)
+            claims.Add(new Claim(ClaimTypes.Role, role));
 
         SecurityTokenDescriptor tokenDescriptor = new()
         {

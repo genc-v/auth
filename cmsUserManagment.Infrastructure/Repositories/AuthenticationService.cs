@@ -3,6 +3,7 @@ using System.Text.Json;
 
 using cms.Domain.Entities;
 
+using cmsUserManagment.Application.Common;
 using cmsUserManagment.Application.Common.ErrorCodes;
 using cmsUserManagment.Application.Common.Validation;
 using cmsUserManagment.Application.DTO;
@@ -21,12 +22,14 @@ public class AuthenticationService(
     IDistributedCache cache,
     AppDbContext dbContext,
     IJwtTokenProvider jwtTokenProvider,
-    JwtDecoder jwtDecoder) : IAuthenticationService
+    JwtDecoder jwtDecoder,
+    ILogService logService) : IAuthenticationService
 {
     private readonly IDistributedCache _cache = cache;
     private readonly AppDbContext _dbContext = dbContext;
     private readonly JwtDecoder _jwtDecoder = jwtDecoder;
     private readonly IJwtTokenProvider _jwtTokenProvider = jwtTokenProvider;
+    private readonly ILogService _logService = logService;
 
     public async Task<object> Login(string email, string password)
     {
@@ -38,11 +41,13 @@ public class AuthenticationService(
 
         if (!user.IsTwoFactorEnabled)
         {
-            string token = _jwtTokenProvider.GenerateToken(user.Email, user.Id.ToString(), user.IsAdmin);
+            List<string> roles = await GetUserRolesAsync(user.Id);
+            string token = _jwtTokenProvider.GenerateToken(user.Email, user.Id.ToString(), roles);
             RefreshToken refreshtoken = new() { UserId = user.Id };
             await _dbContext.RefreshTokens.AddAsync(refreshtoken);
             await _dbContext.SaveChangesAsync();
             await UpdateCache(user);
+            await _logService.WriteLog(user.Id, "Login");
             return new {
                 jwtToken = token,
                 refreshToken = refreshtoken.Id.ToString(),
@@ -74,14 +79,33 @@ public class AuthenticationService(
         if (await _cache.GetStringAsync(key) != null || await _dbContext.Users.AnyAsync(e => e.Email == user.Email))
             throw GeneralErrorCodes.Conflict;
 
+        Role? defaultRole = await _dbContext.Roles.FirstOrDefaultAsync(r => r.Name == AppRoles.User);
+
         User newUser = new()
         {
             Email = user.Email, Username = user.Username, Password = PasswordHelper.HashPassword(user.Password)
         };
 
-        await _dbContext.Users.AddAsync(newUser);
-        await _dbContext.SaveChangesAsync();
+        using var transaction = await _dbContext.Database.BeginTransactionAsync();
+        try
+        {
+            await _dbContext.Users.AddAsync(newUser);
+            await _dbContext.UserProfiles.AddAsync(new UserProfile { UserId = newUser.Id });
+
+            if (defaultRole != null)
+                await _dbContext.UserRoles.AddAsync(new UserRole { UserId = newUser.Id, RoleId = defaultRole.Id });
+
+            await _dbContext.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+
         await UpdateCache(newUser);
+        await _logService.WriteLog(newUser.Id, "Register");
 
         return true;
     }
@@ -98,7 +122,8 @@ public class AuthenticationService(
 
         if (user == null || refreshTokenObj.Expires < DateTime.UtcNow) throw GeneralErrorCodes.NotFound;
 
-        string newToken = _jwtTokenProvider.GenerateToken(user.Email, user.Id.ToString(), user.IsAdmin);
+        List<string> roles = await GetUserRolesAsync(user.Id);
+        string newToken = _jwtTokenProvider.GenerateToken(user.Email, user.Id.ToString(), roles);
 
         await UpdateCache(user);
 
@@ -119,6 +144,7 @@ public class AuthenticationService(
         _dbContext.RefreshTokens.Remove(tokenObj);
         await _cache.RemoveAsync($"email:{user.Email}");
         await _dbContext.SaveChangesAsync();
+        await _logService.WriteLog(userId, "Logout");
     }
 
     public async Task<bool> TwoFactorAuthenticationConfirm(string jwtToken, string code)
@@ -133,6 +159,7 @@ public class AuthenticationService(
         user.IsTwoFactorEnabled = true;
         await _dbContext.SaveChangesAsync();
         await UpdateCache(user);
+        await _logService.WriteLog(userId, "2FA Enabled");
 
         return true;
     }
@@ -149,13 +176,15 @@ public class AuthenticationService(
         TwoFactorAuthenticator tfa = new();
         if (!tfa.ValidateTwoFactorPIN(user.TwoFactorSecret, code)) throw AuthErrorCodes.InvalidVerificationCode;
 
-        string jwtToken = _jwtTokenProvider.GenerateToken(user.Email, user.Id.ToString(), user.IsAdmin);
+        List<string> roles = await GetUserRolesAsync(user.Id);
+        string jwtToken = _jwtTokenProvider.GenerateToken(user.Email, user.Id.ToString(), roles);
         RefreshToken refreshtoken = new() { UserId = user.Id };
 
         _dbContext.TwoFactorAuthCodes.Remove(token);
         await _dbContext.RefreshTokens.AddAsync(refreshtoken);
         await _dbContext.SaveChangesAsync();
         await UpdateCache(user);
+        await _logService.WriteLog(user.Id, "Login", "via 2FA");
 
         return new LoginCredentials { jwtToken = jwtToken, refreshToken = refreshtoken.Id.ToString() };
     }
@@ -197,6 +226,7 @@ public class AuthenticationService(
 
         await _dbContext.SaveChangesAsync();
         await UpdateCache(user);
+        await _logService.WriteLog(userId, "2FA Disabled");
 
         return true;
     }
@@ -252,6 +282,7 @@ public class AuthenticationService(
         if (emailChanged) await _cache.RemoveAsync($"email:{oldEmail}");
 
         await UpdateCache(user);
+        await _logService.WriteLog(userId, "Account Updated");
         return true;
     }
 
@@ -265,17 +296,21 @@ public class AuthenticationService(
         if (user == null)
             throw new GeneralErrorCodes(GeneralErrorCodes.NotFound.Code, GeneralErrorCodes.NotFound.Message);
 
-        return new { user.Username, user.Email, hasTwoFactorAuth = user.IsTwoFactorEnabled };
+        List<string> roles = await GetUserRolesAsync(user.Id);
+        return new { user.Username, user.Email, hasTwoFactorAuth = user.IsTwoFactorEnabled, roles };
     }
 
     private async Task UpdateCache(User user)
     {
+        bool isAdmin = await _dbContext.UserRoles
+            .AnyAsync(ur => ur.UserId == user.Id && ur.Role.Name == AppRoles.Admin);
+
         var cachedUser = new
         {
             user.Id,
             user.Email,
             user.Username,
-            user.IsAdmin,
+            isAdmin,
             user.IsTwoFactorEnabled
         };
 
@@ -284,11 +319,20 @@ public class AuthenticationService(
         await _cache.SetStringAsync(key, JsonSerializer.Serialize(cachedUser));
     }
 
+    private async Task<List<string>> GetUserRolesAsync(Guid userId)
+    {
+        return await _dbContext.UserRoles
+            .Where(ur => ur.UserId == userId)
+            .Select(ur => ur.Role.Name)
+            .ToListAsync();
+    }
+
     private async Task<object> GetRightToken(User user)
     {
         if (!user.IsTwoFactorEnabled)
         {
-            string token = _jwtTokenProvider.GenerateToken(user.Email, user.Id.ToString(), user.IsAdmin);
+            List<string> roles = await GetUserRolesAsync(user.Id);
+            string token = _jwtTokenProvider.GenerateToken(user.Email, user.Id.ToString(), roles);
             RefreshToken refreshtoken = new() { UserId = user.Id };
 
             await _dbContext.RefreshTokens.AddAsync(refreshtoken);
@@ -306,7 +350,6 @@ public class AuthenticationService(
 
         await UpdateCache(user);
 
-        // Instead of returning an anonymous object, throw a specific exception for two-factor required
         throw AuthErrorCodes.TwoFactorRequired;
     }
 }

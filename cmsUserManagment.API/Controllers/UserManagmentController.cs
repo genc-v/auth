@@ -1,3 +1,4 @@
+using cmsUserManagment.Application.Common;
 using cms.Domain.Entities;
 
 using cmsUserManagment.Application.DTO;
@@ -10,7 +11,7 @@ namespace cmsUserManagment.Controllers;
 
 [Route("api/user")]
 [ApiController]
-[Authorize(Roles = "admin")]
+[Authorize(Roles = AppRoles.Admin)]
 public class UserManagementController(IUserManagementService userManagementService) : ControllerBase
 {
     private readonly IUserManagementService _userManagementService = userManagementService;

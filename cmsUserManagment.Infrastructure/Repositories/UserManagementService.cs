@@ -1,6 +1,7 @@
 using System.Text.Json;
 
 using cms.Domain.Entities;
+using cmsUserManagment.Application.Common;
 using cmsUserManagment.Application.Common.ErrorCodes;
 using cmsUserManagment.Application.DTO;
 using cmsUserManagment.Application.Interfaces;
@@ -12,10 +13,11 @@ using Microsoft.Extensions.Caching.Distributed;
 
 namespace cmsUserManagment.Infrastructure.Repositories;
 
-public class UserManagementService(AppDbContext dbContext, IDistributedCache cache) : IUserManagementService
+public class UserManagementService(AppDbContext dbContext, IDistributedCache cache, ILogService logService) : IUserManagementService
 {
     private readonly AppDbContext _dbContext = dbContext;
     private readonly IDistributedCache _cache = cache;
+    private readonly ILogService _logService = logService;
 
     public async Task<PaginatedResult<User>> GetAllUsers(int pageNumber, int pageSize)
     {
@@ -70,7 +72,6 @@ public class UserManagementService(AppDbContext dbContext, IDistributedCache cac
 
         user.Username = userDto.Username;
         user.Email = userDto.Email;
-        user.IsAdmin = userDto.IsAdmin;
 
         _dbContext.Users.Update(user);
         await _dbContext.SaveChangesAsync();
@@ -83,6 +84,7 @@ public class UserManagementService(AppDbContext dbContext, IDistributedCache cac
         }
 
         await UpdateAuthCache(user);
+        await _logService.WriteLog(id, "User Updated", $"Username: {user.Username}, Email: {user.Email}");
 
         return true;
     }
@@ -97,6 +99,7 @@ public class UserManagementService(AppDbContext dbContext, IDistributedCache cac
 
         await _cache.RemoveAsync($"user:{id}");
         await _cache.RemoveAsync($"email:{user.Email}");
+        await _logService.WriteLog(null, "User Deleted", $"UserId: {id}");
 
         return true;
     }
@@ -114,6 +117,8 @@ public class UserManagementService(AppDbContext dbContext, IDistributedCache cac
             await _cache.RemoveAsync($"user:{user.Id}");
             await _cache.RemoveAsync($"email:{user.Email}");
         }
+
+        await _logService.WriteLog(null, "Bulk Users Deleted", $"UserIds: {string.Join(", ", ids)}");
 
         return true;
     }
@@ -136,12 +141,19 @@ public class UserManagementService(AppDbContext dbContext, IDistributedCache cac
 
         if (!string.IsNullOrWhiteSpace(email)) query = query.Where(u => u.Email.Contains(email));
 
-        if (isAdmin.HasValue) query = query.Where(u => u.IsAdmin == isAdmin.Value);
+        if (isAdmin.HasValue)
+        {
+            var adminUserIds = _dbContext.UserRoles
+                .Where(ur => ur.Role.Name == AppRoles.Admin)
+                .Select(ur => ur.UserId);
+            query = isAdmin.Value
+                ? query.Where(u => adminUserIds.Contains(u.Id))
+                : query.Where(u => !adminUserIds.Contains(u.Id));
+        }
 
         query = orderBy?.ToLower() switch
         {
             "email" => descending ? query.OrderByDescending(u => u.Email) : query.OrderBy(u => u.Email),
-            "isadmin" => descending ? query.OrderByDescending(u => u.IsAdmin) : query.OrderBy(u => u.IsAdmin),
             _ => descending ? query.OrderByDescending(u => u.Username) : query.OrderBy(u => u.Username)
         };
 
@@ -164,12 +176,15 @@ public class UserManagementService(AppDbContext dbContext, IDistributedCache cac
 
     private async Task UpdateAuthCache(User user)
     {
+        bool isAdmin = await _dbContext.UserRoles
+            .AnyAsync(ur => ur.UserId == user.Id && ur.Role.Name == AppRoles.Admin);
+
         var cachedUser = new
         {
             user.Id,
             user.Email,
             user.Username,
-            user.IsAdmin,
+            isAdmin,
             user.IsTwoFactorEnabled
         };
 

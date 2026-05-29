@@ -15,7 +15,10 @@ public class User
     public string? TwoFactorSecret { get; set; }
 
     public bool IsTwoFactorEnabled { get; set; } = false;
-    public bool IsAdmin { get; set; } = false;
 
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+    public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
+    public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+    public ICollection<ActivityLog> ActivityLogs { get; set; } = new List<ActivityLog>();
+    public UserProfile? Profile { get; set; }
 }

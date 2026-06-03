@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace cmsUserManagment.Controllers;
 
-[Route("api/notifications")]
+[Route("api/notifications")]   
 [ApiController]
 [Authorize]
 public class NotificationsController(

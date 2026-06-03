@@ -34,15 +34,24 @@ public class JwtValidationMiddleware
             return;
         }
 
+        // SignalR uses JWT via query string; JwtBearer OnMessageReceived handles hub auth.
+        if (context.Request.Path.StartsWithSegments("/hubs"))
+        {
+            await _next(context);
+            return;
+        }
+
         string? authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
-        if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Bearer "))
+        string? token = null;
+        if (!string.IsNullOrWhiteSpace(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            token = authHeader["Bearer ".Length..].Trim();
+
+        if (string.IsNullOrEmpty(token))
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             await context.Response.WriteAsync("Missing or invalid Authorization header.");
             return;
         }
-
-        string token = authHeader.Substring("Bearer ".Length).Trim();
 
         try
         {

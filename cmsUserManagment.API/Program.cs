@@ -7,6 +7,8 @@ using cmsUserManagment.Infrastructure.Repositories;
 using cmsUserManagment.Infrastructure.Kafka;
 using cmsUserManagment.Infrastructure.Persistance;
 using cmsUserManagment.Infrastructure.Security;
+using cmsUserManagment.Infrastructure.SignalR;
+using Microsoft.AspNetCore.SignalR;
 using cmsUserManagment.Middlewares;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -122,6 +124,7 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
+builder.Services.AddSingleton<IUserIdProvider, UserIdProvider>();
 
 builder.Services.AddScoped<HeadersManager>();
 builder.Services.AddScoped<JwtDecoder>();

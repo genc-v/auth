@@ -23,13 +23,15 @@ public class AuthenticationService(
     AppDbContext dbContext,
     IJwtTokenProvider jwtTokenProvider,
     JwtDecoder jwtDecoder,
-    ILogService logService) : IAuthenticationService
+    ILogService logService,
+    INotificationService notificationService) : IAuthenticationService
 {
     private readonly IDistributedCache _cache = cache;
     private readonly AppDbContext _dbContext = dbContext;
     private readonly JwtDecoder _jwtDecoder = jwtDecoder;
     private readonly IJwtTokenProvider _jwtTokenProvider = jwtTokenProvider;
     private readonly ILogService _logService = logService;
+    private readonly INotificationService _notificationService = notificationService;
 
     public async Task<object> Login(string email, string password)
     {
@@ -48,6 +50,7 @@ public class AuthenticationService(
             await _dbContext.SaveChangesAsync();
             await UpdateCache(user);
             await _logService.WriteLog(user.Id, "Login");
+            await SendLoginNotificationAsync(user);
             return new {
                 jwtToken = token,
                 refreshToken = refreshtoken.Id.ToString(),
@@ -185,6 +188,7 @@ public class AuthenticationService(
         await _dbContext.SaveChangesAsync();
         await UpdateCache(user);
         await _logService.WriteLog(user.Id, "Login", "via 2FA");
+        await SendLoginNotificationAsync(user);
 
         return new LoginCredentials { jwtToken = jwtToken, refreshToken = refreshtoken.Id.ToString() };
     }
@@ -325,6 +329,16 @@ public class AuthenticationService(
             .Where(ur => ur.UserId == userId)
             .Select(ur => ur.Role.Name)
             .ToListAsync();
+    }
+
+    private async Task SendLoginNotificationAsync(User user)
+    {
+        await _notificationService.CreateNotification(new CreateNotificationDto
+        {
+            UserId = user.Id,
+            Message = $"Hello {user.Username}, you logged in successfully.",
+            Type = "Login"
+        });
     }
 
     private async Task<object> GetRightToken(User user)

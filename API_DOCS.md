@@ -581,4 +581,22 @@ Pass the JWT via query string:
 /hubs/notifications?access_token={jwtToken}
 ```
 
-Connected clients are joined to a group keyed by their `userId`. Notifications created via the API or triggered by Kafka (`files.uploaded`) are broadcast to that group in real time.
+Connected clients are joined to a group keyed by their `userId`. Notifications created via the API, on successful login (`Type: "Login"`), or triggered by Kafka (`files.uploaded`) are broadcast to that group in real time.
+
+**Client event**: `ReceiveNotification` — payload is `NotificationResponse`.
+
+**Example (JavaScript, after login)**:
+```javascript
+import * as signalR from "@microsoft/signalr";
+
+const connection = new signalR.HubConnectionBuilder()
+  .withUrl(`${API_BASE}/hubs/notifications?access_token=${jwtToken}`)
+  .withAutomaticReconnect()
+  .build();
+
+connection.on("ReceiveNotification", (notification) => {
+  console.log(notification.message); // e.g. login welcome message
+});
+
+await connection.start();
+```

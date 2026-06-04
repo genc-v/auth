@@ -52,6 +52,20 @@ public class UserManagementService(AppDbContext dbContext, IDistributedCache cac
         return user;
     }
 
+    public async Task<Guid> GetUserIdByEmail(string email)
+    {
+        InputValidator.ValidateEmail(email);
+
+        var userId = await _dbContext.Users
+            .Where(u => u.Email == email)
+            .Select(u => u.Id)
+            .FirstOrDefaultAsync();
+
+        if (userId == Guid.Empty) throw GeneralErrorCodes.NotFound;
+
+        return userId;
+    }
+
     public async Task<bool> UpdateUser(Guid id, UpdateUserDto userDto)
     {
         if (userDto == null) throw GeneralErrorCodes.InvalidInput;

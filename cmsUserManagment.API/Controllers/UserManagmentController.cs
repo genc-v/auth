@@ -49,6 +49,23 @@ public class UserManagementController(IUserManagementService userManagementServi
     }
 
     /// <summary>
+    /// Gets a user's ID by their email address.
+    /// </summary>
+    /// <param name="email">The email to look up.</param>
+    /// <returns>The user ID if the email is found.</returns>
+    [HttpGet("id-by-email")]
+    [ProducesResponseType(typeof(Guid), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetUserIdByEmail([FromQuery] string email)
+    {
+        var userId = await _userManagementService.GetUserIdByEmail(email);
+        return Ok(userId);
+    }
+
+    /// <summary>
     /// Searches for users.
     /// </summary>
     /// <param name="username">The username to search for.</param>

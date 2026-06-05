@@ -4,7 +4,7 @@ namespace cmsUserManagment.Application.Interfaces;
 
 public interface INotificationService
 {
-    Task<IEnumerable<NotificationResponse>> GetUserNotifications(Guid userId);
+    Task<PaginatedResult<NotificationResponse>> GetUserNotifications(Guid userId, int pageNumber, int pageSize);
     Task<NotificationResponse> CreateNotification(CreateNotificationDto dto);
     Task MarkAsRead(Guid notificationId, Guid userId);
     Task MarkAllAsRead(Guid userId);

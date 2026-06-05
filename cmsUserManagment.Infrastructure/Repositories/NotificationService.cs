@@ -15,13 +15,27 @@ public class NotificationService(AppDbContext dbContext, IHubContext<Notificatio
     private readonly AppDbContext _dbContext = dbContext;
     private readonly IHubContext<NotificationHub> _hubContext = hubContext;
 
-    public async Task<IEnumerable<NotificationResponse>> GetUserNotifications(Guid userId)
+    public async Task<PaginatedResult<NotificationResponse>> GetUserNotifications(Guid userId, int pageNumber, int pageSize)
     {
-        return await _dbContext.Notifications
+        var query = _dbContext.Notifications
             .Where(n => n.UserId == userId)
-            .OrderByDescending(n => n.CreatedAt)
+            .OrderByDescending(n => n.CreatedAt);
+
+        int totalCount = await query.CountAsync();
+
+        List<NotificationResponse> items = await query
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
             .Select(n => MapToResponse(n))
             .ToListAsync();
+
+        return new PaginatedResult<NotificationResponse>
+        {
+            Items = items,
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
     }
 
     public async Task<NotificationResponse> CreateNotification(CreateNotificationDto dto)

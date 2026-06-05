@@ -20,14 +20,14 @@ public class NotificationsController(
     private readonly JwtDecoder _jwtDecoder = jwtDecoder;
     private readonly HeadersManager _headersManager = headersManager;
 
-    /// <summary>Gets all notifications for the current user.</summary>
+    /// <summary>Gets all notifications for the current user (paginated).</summary>
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<NotificationResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetMyNotifications()
+    [ProducesResponseType(typeof(PaginatedResult<NotificationResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMyNotifications([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
         string token = _headersManager.GetJwtFromHeader(Request.Headers);
         Guid userId = _jwtDecoder.GetUserid(token);
-        var notifications = await _notificationService.GetUserNotifications(userId);
+        var notifications = await _notificationService.GetUserNotifications(userId, pageNumber, pageSize);
         return Ok(notifications);
     }
 

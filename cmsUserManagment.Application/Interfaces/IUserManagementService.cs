@@ -8,7 +8,7 @@ public interface IUserManagementService
 {
     Task<PaginatedResult<User>> GetAllUsers(int pageNumber, int pageSize);
     Task<User?> GetUserById(Guid id);
-    Task<Guid> GetUserIdByEmail(string email);
+    Task<PublicUserDto> GetUserByEmail(string email);
     Task<bool> UpdateUser(Guid id, UpdateUserDto user);
     Task<bool> DeleteUser(Guid id);
     Task<bool> DeleteBulkUsers(IEnumerable<Guid> ids);

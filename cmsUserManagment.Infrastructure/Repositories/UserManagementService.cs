@@ -52,18 +52,18 @@ public class UserManagementService(AppDbContext dbContext, IDistributedCache cac
         return user;
     }
 
-    public async Task<Guid> GetUserIdByEmail(string email)
+    public async Task<PublicUserDto> GetUserByEmail(string email)
     {
         InputValidator.ValidateEmail(email);
 
-        var userId = await _dbContext.Users
+        var user = await _dbContext.Users
             .Where(u => u.Email == email)
-            .Select(u => u.Id)
+            .Select(u => new PublicUserDto { Id = u.Id, Email = u.Email, Username = u.Username })
             .FirstOrDefaultAsync();
 
-        if (userId == Guid.Empty) throw GeneralErrorCodes.NotFound;
+        if (user == null) throw GeneralErrorCodes.NotFound;
 
-        return userId;
+        return user;
     }
 
     public async Task<bool> UpdateUser(Guid id, UpdateUserDto userDto)

@@ -58,7 +58,13 @@ public class UserManagementService(AppDbContext dbContext, IDistributedCache cac
 
         var user = await _dbContext.Users
             .Where(u => u.Email == email)
-            .Select(u => new PublicUserDto { Id = u.Id, Email = u.Email, Username = u.Username })
+            .Select(u => new PublicUserDto
+            {
+                UserId = u.Id,
+                DisplayName = u.Profile != null ? u.Profile.DisplayName : null,
+                AvatarUrl = u.Profile != null ? u.Profile.AvatarUrl : null,
+                Bio = u.Profile != null ? u.Profile.Bio : null
+            })
             .FirstOrDefaultAsync();
 
         if (user == null) throw GeneralErrorCodes.NotFound;

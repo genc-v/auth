@@ -53,13 +53,18 @@ public class ProfileService(AppDbContext dbContext, ILogService logService) : IP
         return MapToResponse(profile);
     }
 
-    public async Task<IEnumerable<ProfileResponse>> GetProfilesByIds(IEnumerable<Guid> ids)
+    public async Task<IEnumerable<PublicUserDto>> GetProfilesByIds(IEnumerable<Guid> ids)
     {
-        var profiles = await _dbContext.UserProfiles
+        return await _dbContext.UserProfiles
             .Where(p => ids.Contains(p.UserId))
+            .Select(p => new PublicUserDto
+            {
+                UserId = p.UserId,
+                DisplayName = p.DisplayName,
+                AvatarUrl = p.AvatarUrl,
+                Bio = p.Bio
+            })
             .ToListAsync();
-
-        return profiles.Select(MapToResponse);
     }
 
     private static ProfileResponse MapToResponse(UserProfile profile) => new()

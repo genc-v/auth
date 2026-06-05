@@ -2,9 +2,10 @@ namespace cmsUserManagment.Application.DTO;
 
 public class PublicUserDto
 {
-    public Guid Id { get; set; }
-    public string Email { get; set; } = string.Empty;
-    public string Username { get; set; } = string.Empty;
+    public Guid UserId { get; set; }
+    public string? DisplayName { get; set; }
+    public string? AvatarUrl { get; set; }
+    public string? Bio { get; set; }
 }
 
 public class UpdateProfileDto

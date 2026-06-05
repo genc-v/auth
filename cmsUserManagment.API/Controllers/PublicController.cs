@@ -35,7 +35,7 @@ public class PublicController(IUserManagementService userManagementService, IPro
     /// <param name="ids">Array of user GUIDs.</param>
     /// <returns>List of profiles for the given IDs.</returns>
     [HttpPost("users/profiles")]
-    [ProducesResponseType(typeof(IEnumerable<ProfileResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(IEnumerable<PublicUserDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetProfilesByIds([FromBody] IEnumerable<Guid> ids)
     {
         var profiles = await _profileService.GetProfilesByIds(ids);

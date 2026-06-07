@@ -36,12 +36,6 @@ public class AuthController : ControllerBase
         return new { success, data = (object)null };
     }
 
-    /// <summary>
-    /// Logs in a user.
-    /// </summary>
-    /// <param name="email">The email of the user.</param>
-    /// <param name="password">The password of the user.</param>
-    /// <returns>A JWT token if successful.</returns>
     [HttpPost("login")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
@@ -53,11 +47,6 @@ public class AuthController : ControllerBase
         return new { success = true, data = result };
     }
 
-    /// <summary>
-    /// Logs out a user using their refresh token.
-    /// </summary>
-    /// <param name="refreshToken">The refresh token.</param>
-    /// <returns>True if logout was successful.</returns>
     [HttpPost("logout")]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -69,11 +58,6 @@ public class AuthController : ControllerBase
         return new { success = true, data = (object)null };
     }
 
-    /// <summary>
-    /// Refreshes the JWT token.
-    /// </summary>
-    /// <param name="refreshToken">The refresh token.</param>
-    /// <returns>A new JWT token.</returns>
     [HttpPost("refresh")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
@@ -86,10 +70,6 @@ public class AuthController : ControllerBase
         return new { success = true, data = jwtToken };
     }
 
-    /// <summary>
-    /// Generates a two-factor authentication setup code.
-    /// </summary>
-    /// <returns>The setup code and QR code URL.</returns>
     [HttpPost("2fa/setup")]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -99,11 +79,6 @@ public class AuthController : ControllerBase
         return new { success = true, data = setupCode };
     }
 
-    /// <summary>
-    /// Confirms the two-factor authentication setup.
-    /// </summary>
-    /// <param name="code">The confirmation code.</param>
-    /// <returns>True if confirmation was successful.</returns>
     [HttpPost("2fa/confirm")]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -115,10 +90,6 @@ public class AuthController : ControllerBase
         return new { success, data = (object)null };
     }
 
-    /// <summary>
-    /// Disables two-factor authentication.
-    /// </summary>
-    /// <returns>True if disabled successfully.</returns>
     [HttpPost("2fa/disable")]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -129,12 +100,6 @@ public class AuthController : ControllerBase
         return new { success, data = (object)null };
     }
 
-    /// <summary>
-    /// Logs in using two-factor authentication.
-    /// </summary>
-    /// <param name="loginId">The login ID.</param>
-    /// <param name="code">The two-factor authentication code.</param>
-    /// <returns>The login credentials.</returns>
     [HttpPost("2fa/login")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
@@ -146,11 +111,6 @@ public class AuthController : ControllerBase
         return new { success = true, data = new { jwtToken = credentials.jwtToken, refreshToken = credentials.refreshToken } };
     }
 
-    /// <summary>
-    /// Updates the user's account information.
-    /// </summary>
-    /// <param name="request">The update request.</param>
-    /// <returns>True if the update was successful.</returns>
     [HttpPut("account")]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -161,10 +121,6 @@ public class AuthController : ControllerBase
         return new { success, data = (object)null };
     }
 
-    /// <summary>
-    /// Gets the user's account information.
-    /// </summary>
-    /// <returns>The account information.</returns>
     [HttpGet("account")]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

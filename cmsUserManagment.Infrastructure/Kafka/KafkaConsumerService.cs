@@ -129,7 +129,6 @@ public class KafkaConsumerService : BackgroundService
 
         _logger.LogInformation("Updated AvatarUrl for user {UserId} → {Url}", userId, evt.Url);
 
-        // Push real-time notification to the user
         INotificationService notificationService = scope.ServiceProvider.GetRequiredService<INotificationService>();
         await notificationService.CreateNotification(new CreateNotificationDto
         {

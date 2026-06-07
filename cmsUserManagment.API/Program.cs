@@ -142,7 +142,6 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-    // Fresh database: create everything
     await db.Database.EnsureCreatedAsync();
 
     // Existing databases may be missing tables added after the initial schema.
@@ -227,7 +226,6 @@ using (var scope = app.Services.CreateScope())
             CONSTRAINT `FK_UserRoles_Users_UserId` FOREIGN KEY (`UserId`) REFERENCES `Users` (`Id`) ON DELETE CASCADE
         ) CHARACTER SET=utf8mb4");
 
-    // Seed roles if not present
     foreach (var (name, desc) in new[] { (AppRoles.User, "Standard user"), (AppRoles.Admin, "Administrator") })
     {
         if (!await db.Roles.AnyAsync(r => r.Name == name))

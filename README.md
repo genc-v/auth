@@ -160,13 +160,25 @@ Log fields: `id`, `userId`, `action`, `details`, `ipAddress`, `createdAt`.
 
 **Hub URL**: `/hubs/notifications`
 
+<<<<<<< HEAD
 Connect with the JWT in the query string:
+=======
+- **Autentifikimi dhe Autorizimi**: Implementon standardet **OAuth 2.0 / JWT** për qasje të sigurtë.
+- **MFA**: Mbështetje për **Autentifikimin me Dy Faktorë (TOTP)** për siguri të shtuar.
+- **RBAC**: Logjika e Kontrollit të Qasjes Bazuar në Role (RBAC) izolon aftësitë e Adminit nga Përdoruesit standardë.
+- **Mbrojtja e Të Dhënave**: Fjalëkalimet ruhen në mënyrë të sigurt (hash). HTTPS është e detyrueshme në ambientet e prodhimit.
+>>>>>>> 78eaa19 (Last Minure Update)
 
 ```
 /hubs/notifications?access_token={jwtToken}
 ```
 
+<<<<<<< HEAD
 Clients are joined to a group keyed by their `userId`. The server emits `ReceiveNotification` events.
+=======
+- **Redis** Caching është implementuar për të ruajtur të dhënat që kërkohen shpesh dhe listat e lejimit/ndalimit të token-ave.
+- **Async/Await**: Përdorim universal i programimit asinkron në C# për të përballuar konkurrencën e lartë.
+>>>>>>> 78eaa19 (Last Minure Update)
 
 ```javascript
 import * as signalR from "@microsoft/signalr";

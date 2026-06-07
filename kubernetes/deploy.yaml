@@ -26,23 +26,24 @@ spec:
             - containerPort: 8080
           env:
             - name: ConnectionStrings__DefaultConnection
-              value: "Server=mysql;Database=auth;Uid=user;Pwd=alskjdfa@alskdjfAAAb12;"
+              value: >-
+                Server=mysql;Port=3306;Database=cmsorg;Uid=cmsorg;Pwd=cmsorg_pass;
             - name: Redis__Connection
-              value: "redis:6379"
+              value: redis:6379
             - name: JwtSettings__Secret
-              value: "4ba5b968796f41d8de85d6063fe4929d2cb649594090b9d778e54680ec273341"
+              value: 4ba5b968796f41d8de85d6063fe4929d2cb649594090b9d778e54680ec273341
             - name: JwtSettings__Issuer
-              value: "cms"
+              value: cms
             - name: JwtSettings__Audience
-              value: "account"
+              value: account
             - name: JwtSettings__ExpiryMinutes
-              value: "60"
+              value: '60'
             - name: Kafka__BootstrapServers
-              value: "kafka-1768077348-headless:9092"
+              value: kafka:9092
             - name: Kafka__FilesUploadedTopic
-              value: "files.uploaded"
+              value: files.uploaded
             - name: Kafka__ConsumerGroup
-              value: "cms-user-management"
+              value: cms-user-management
 
 ---
 apiVersion: v1

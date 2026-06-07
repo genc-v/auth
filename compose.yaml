@@ -1,0 +1,61 @@
+version: '3.9'
+
+services:
+  cmsusermanagement:
+    build:
+      context: .
+      dockerfile: cmsUserManagment.API/Dockerfile
+    depends_on:
+      - mysql
+      - redis
+    environment:
+      ConnectionStrings__DefaultConnection: 'Server=mysql;Port=3306;Database=cmsorg;Uid=cmsorg;Pwd=cmsorg_pass;'
+      Redis__Connection: 'redis:6379'
+      JwtSettings__Secret: '4ba5b968796f41d8de85d6063fe4929d2cb649594090b9d778e54680ec273341'
+      JwtSettings__Issuer: 'cms'
+      JwtSettings__Audience: 'account'
+      JwtSettings__ExpiryMinutes: '60'
+      Kafka__BootstrapServers: 'kafka:9092'
+      Kafka__FilesUploadedTopic: 'files.uploaded'
+      Kafka__ConsumerGroup: 'cms-user-management'
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - '5055:8080' # Map to external port
+    networks:
+      - cmsauthnetwork
+      - kafka-net
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: cmsorg
+      MYSQL_USER: cmsorg
+      MYSQL_PASSWORD: 'cmsorg_pass'
+      MYSQL_ROOT_PASSWORD: 'rootPassword123!'
+    ports:
+      - '33063:3306' # Host port 33063 to avoid conflicts with other services
+    volumes:
+      - auth-mysql-data:/var/lib/mysql
+    networks:
+      - cmsauthnetwork
+
+  redis:
+    image: redis:7
+    ports:
+      - '6381:6379' # Host port 6381 to avoid conflicts
+    volumes:
+      - auth-redis-data:/data
+    networks:
+      - cmsauthnetwork
+
+volumes:
+  auth-mysql-data:
+  auth-redis-data:
+
+networks:
+  cmsauthnetwork:
+    driver: bridge
+  kafka-net:
+    external: true
+    name: nest-s3-kafka_default

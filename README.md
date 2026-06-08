@@ -32,7 +32,7 @@ Client
                                             pushes real-time notification via SignalR
 ```
 
-All services validate JWTs on their own — there is no API gateway. The `sub` / `NameIdentifier` claim in the JWT carries the user ID; services never accept a `userId` from the request body.
+All services validate JWTs on their own. The `sub` / `NameIdentifier` claim in the JWT carries the user ID; services never accept a `userId` from the request body.
 
 ---
 

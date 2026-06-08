@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: cmsUserManagment.API/Dockerfile
+    restart: unless-stopped
     depends_on:
       - mysql
       - redis
@@ -18,6 +19,9 @@ services:
       Kafka__BootstrapServers: 'kafka:9092'
       Kafka__FilesUploadedTopic: 'files.uploaded'
       Kafka__ConsumerGroup: 'cms-user-management'
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -36,7 +40,7 @@ services:
     ports:
       - '33063:3306' # Host port 33063 to avoid conflicts with other services
     volumes:
-      - auth-mysql-data:/var/lib/mysql
+      - mysql-user-data:/var/lib/mysql
     networks:
       - cmsauthnetwork
 
@@ -45,13 +49,13 @@ services:
     ports:
       - '6381:6379' # Host port 6381 to avoid conflicts
     volumes:
-      - auth-redis-data:/data
+      - redis-user-data:/data
     networks:
       - cmsauthnetwork
 
 volumes:
-  auth-mysql-data:
-  auth-redis-data:
+  mysql-user-data:
+  redis-user-data:
 
 networks:
   cmsauthnetwork:

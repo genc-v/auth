@@ -129,4 +129,23 @@ public class AuthController : ControllerBase
         var info = await _authenticationService.GetUserInfo(_headersManager.GetJwtFromHeader(Request.Headers));
         return new { success = true, data = info };
     }
+
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    public async Task<object> ForgotPassword([FromBody] ForgotPasswordRequest request)
+    {
+        await _authenticationService.ForgotPassword(request.Email);
+        return new { success = true, message = "If the email exists, a reset code has been sent." };
+    }
+
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<object> ResetPassword([FromBody] ResetPasswordRequest request)
+    {
+        await _authenticationService.ResetPassword(request.Code, request.NewPassword);
+        return new { success = true };
+    }
 }

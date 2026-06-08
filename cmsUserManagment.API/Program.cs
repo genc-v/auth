@@ -7,6 +7,7 @@ using cmsUserManagment.Infrastructure.Repositories;
 using cmsUserManagment.Infrastructure.Kafka;
 using cmsUserManagment.Infrastructure.Persistance;
 using cmsUserManagment.Infrastructure.Security;
+using cmsUserManagment.Infrastructure.Services;
 using cmsUserManagment.Infrastructure.SignalR;
 using Microsoft.AspNetCore.SignalR;
 using cmsUserManagment.Middlewares;
@@ -19,6 +20,7 @@ using Microsoft.OpenApi.Models;
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 
 string? connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
@@ -134,6 +136,7 @@ builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ILogService, LogService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
+builder.Services.AddHttpClient<IEmailService, EmailService>();
 builder.Services.AddHostedService<KafkaConsumerService>();
 
 var app = builder.Build();
@@ -196,6 +199,19 @@ using (var scope = app.Services.CreateScope())
             `UpdatedAt` datetime(6) NOT NULL DEFAULT '0001-01-01 00:00:00.000000',
             PRIMARY KEY (`UserId`),
             CONSTRAINT `FK_UserProfiles_Users_UserId` FOREIGN KEY (`UserId`) REFERENCES `Users` (`Id`) ON DELETE CASCADE
+        ) CHARACTER SET=utf8mb4");
+
+    await db.Database.ExecuteSqlRawAsync(@"
+        CREATE TABLE IF NOT EXISTS `PasswordResetTokens` (
+            `Id` char(36) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL,
+            `UserId` char(36) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL,
+            `Code` longtext CHARACTER SET utf8mb4 NOT NULL,
+            `ExpiresAt` datetime(6) NOT NULL,
+            `IsUsed` tinyint(1) NOT NULL,
+            `CreatedAt` datetime(6) NOT NULL DEFAULT '0001-01-01 00:00:00.000000',
+            PRIMARY KEY (`Id`),
+            KEY `IX_PasswordResetTokens_UserId` (`UserId`),
+            CONSTRAINT `FK_PasswordResetTokens_Users_UserId` FOREIGN KEY (`UserId`) REFERENCES `Users` (`Id`) ON DELETE CASCADE
         ) CHARACTER SET=utf8mb4");
 
     // Backfill columns added to UserProfiles after the initial schema

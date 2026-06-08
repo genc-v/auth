@@ -44,4 +44,7 @@ public class AuthErrorCodes : Exception
 
     public static AuthErrorCodes TwoFactorRequired
         => new(12, "Two-factor authentication is required for this account.");
+
+    public static AuthErrorCodes InvalidResetToken
+        => new(13, "Invalid or expired reset code.");
 }

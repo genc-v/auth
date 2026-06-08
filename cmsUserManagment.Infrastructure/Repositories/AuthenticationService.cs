@@ -24,6 +24,7 @@ public class AuthenticationService(
     IJwtTokenProvider jwtTokenProvider,
     JwtDecoder jwtDecoder,
     ILogService logService,
+    IEmailService emailService,
     INotificationService notificationService) : IAuthenticationService
 {
     private readonly IDistributedCache _cache = cache;
@@ -32,6 +33,7 @@ public class AuthenticationService(
     private readonly IJwtTokenProvider _jwtTokenProvider = jwtTokenProvider;
     private readonly ILogService _logService = logService;
     private readonly INotificationService _notificationService = notificationService;
+    private readonly IEmailService _emailService = emailService;
 
     public async Task<object> Login(string email, string password)
     {
@@ -288,6 +290,55 @@ public class AuthenticationService(
         await UpdateCache(user);
         await _logService.WriteLog(userId, "Account Updated");
         return true;
+    }
+
+    public async Task ForgotPassword(string email)
+    {
+        InputValidator.ValidateEmail(email);
+
+        User? user = await _dbContext.Users.FirstOrDefaultAsync(e => e.Email == email);
+        if (user == null)
+            return;
+
+        string code = RandomNumberGenerator.GetInt32(100000, 999999).ToString();
+
+        string codeHash = Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(code)));
+
+        PasswordResetToken resetToken = new()
+        {
+            UserId = user.Id,
+            Code = codeHash,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(15),
+            IsUsed = false
+        };
+
+        _dbContext.PasswordResetTokens.Add(resetToken);
+        await _dbContext.SaveChangesAsync();
+
+        await _emailService.SendPasswordResetEmailAsync(user.Email, code);
+    }
+
+    public async Task ResetPassword(string code, string newPassword)
+    {
+        InputValidator.ValidatePassword(newPassword);
+
+        string codeHash = Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(code)));
+
+        PasswordResetToken? resetToken = await _dbContext.PasswordResetTokens
+            .FirstOrDefaultAsync(t => t.Code == codeHash && !t.IsUsed && t.ExpiresAt > DateTime.UtcNow);
+
+        if (resetToken == null)
+            throw AuthErrorCodes.InvalidResetToken;
+
+        User? user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == resetToken.UserId);
+        if (user == null)
+            throw GeneralErrorCodes.NotFound;
+
+        user.Password = PasswordHelper.HashPassword(newPassword);
+        resetToken.IsUsed = true;
+
+        await _dbContext.SaveChangesAsync();
+        await _logService.WriteLog(user.Id, "Password Reset");
     }
 
     public async Task<object> GetUserInfo(string jwtToken)

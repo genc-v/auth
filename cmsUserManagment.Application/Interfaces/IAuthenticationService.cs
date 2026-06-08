@@ -17,4 +17,6 @@ public interface IAuthenticationService
     public Task<bool> DisableTwoFactorAuth(string jwtToken, string code);
     public Task<bool> UpdateAccount(string jwtToken, UpdateAccountRequest request);
     public Task<object> GetUserInfo(string jwtToken);
+    public Task ForgotPassword(string email);
+    public Task ResetPassword(string code, string newPassword);
 }

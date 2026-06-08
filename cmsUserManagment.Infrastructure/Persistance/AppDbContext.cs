@@ -18,6 +18,7 @@ public class AppDbContext : DbContext
     public virtual DbSet<Notification> Notifications { get; set; }
     public virtual DbSet<ActivityLog> ActivityLogs { get; set; }
     public virtual DbSet<UserProfile> UserProfiles { get; set; }
+    public virtual DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -67,6 +68,14 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Role>(entity =>
         {
             entity.HasIndex(e => e.Name).IsUnique();
+        });
+
+        modelBuilder.Entity<PasswordResetToken>(entity =>
+        {
+            entity.HasOne(e => e.User)
+                  .WithMany(u => u.PasswordResetTokens)
+                  .HasForeignKey(e => e.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

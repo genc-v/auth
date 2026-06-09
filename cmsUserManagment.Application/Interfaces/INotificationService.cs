@@ -9,4 +9,7 @@ public interface INotificationService
     Task MarkAsRead(Guid notificationId, Guid userId);
     Task MarkAllAsRead(Guid userId);
     Task DeleteNotification(Guid notificationId, Guid userId);
+
+    Task RegisterDeviceToken(Guid userId, string token, string? platform);
+    Task RemoveDeviceToken(string token);
 }

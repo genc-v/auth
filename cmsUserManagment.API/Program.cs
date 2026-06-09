@@ -137,6 +137,10 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ILogService, LogService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddHttpClient<IEmailService, EmailService>();
+builder.Services.AddHttpClient<IExpoPushService, ExpoPushService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
 builder.Services.AddHostedService<KafkaConsumerService>();
 
 var app = builder.Build();
@@ -212,6 +216,19 @@ using (var scope = app.Services.CreateScope())
             PRIMARY KEY (`Id`),
             KEY `IX_PasswordResetTokens_UserId` (`UserId`),
             CONSTRAINT `FK_PasswordResetTokens_Users_UserId` FOREIGN KEY (`UserId`) REFERENCES `Users` (`Id`) ON DELETE CASCADE
+        ) CHARACTER SET=utf8mb4");
+
+    await db.Database.ExecuteSqlRawAsync(@"
+        CREATE TABLE IF NOT EXISTS `DeviceTokens` (
+            `Id` char(36) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL,
+            `UserId` char(36) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL,
+            `Token` varchar(255) CHARACTER SET utf8mb4 NOT NULL,
+            `Platform` varchar(50) CHARACTER SET utf8mb4 NULL,
+            `CreatedAt` datetime(6) NOT NULL DEFAULT '0001-01-01 00:00:00.000000',
+            PRIMARY KEY (`Id`),
+            UNIQUE KEY `IX_DeviceTokens_Token` (`Token`),
+            KEY `IX_DeviceTokens_UserId` (`UserId`),
+            CONSTRAINT `FK_DeviceTokens_Users_UserId` FOREIGN KEY (`UserId`) REFERENCES `Users` (`Id`) ON DELETE CASCADE
         ) CHARACTER SET=utf8mb4");
 
     // Backfill columns added to UserProfiles after the initial schema

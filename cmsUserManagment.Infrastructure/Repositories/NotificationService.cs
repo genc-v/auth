@@ -10,10 +10,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace cmsUserManagment.Infrastructure.Repositories;
 
-public class NotificationService(AppDbContext dbContext, IHubContext<NotificationHub> hubContext) : INotificationService
+public class NotificationService(
+    AppDbContext dbContext,
+    IHubContext<NotificationHub> hubContext,
+    IExpoPushService expoPushService) : INotificationService
 {
     private readonly AppDbContext _dbContext = dbContext;
     private readonly IHubContext<NotificationHub> _hubContext = hubContext;
+    private readonly IExpoPushService _expoPushService = expoPushService;
 
     public async Task<PaginatedResult<NotificationResponse>> GetUserNotifications(Guid userId, int pageNumber, int pageSize)
     {
@@ -59,7 +63,66 @@ public class NotificationService(AppDbContext dbContext, IHubContext<Notificatio
             .Group(dto.UserId.ToString())
             .SendAsync("ReceiveNotification", response);
 
+        List<string> deviceTokens = await _dbContext.DeviceTokens
+            .Where(d => d.UserId == dto.UserId)
+            .Select(d => d.Token)
+            .ToListAsync();
+
+        if (deviceTokens.Count > 0)
+        {
+            string title = dto.Type switch
+            {
+                "Login" => "New login to your account",
+                _ => "Notification"
+            };
+
+            await _expoPushService.SendAsync(
+                deviceTokens,
+                title,
+                dto.Message,
+                new { type = dto.Type, notificationId = response.Id });
+        }
+
         return response;
+    }
+
+    public async Task RegisterDeviceToken(Guid userId, string token, string? platform)
+    {
+        if (string.IsNullOrWhiteSpace(token)) throw GeneralErrorCodes.InvalidInput;
+
+        DeviceToken? existing = await _dbContext.DeviceTokens
+            .FirstOrDefaultAsync(d => d.Token == token);
+
+        if (existing != null)
+        {
+            if (existing.UserId != userId)
+            {
+                existing.UserId = userId;
+                existing.Platform = platform;
+                await _dbContext.SaveChangesAsync();
+            }
+            return;
+        }
+
+        await _dbContext.DeviceTokens.AddAsync(new DeviceToken
+        {
+            UserId = userId,
+            Token = token,
+            Platform = platform
+        });
+        await _dbContext.SaveChangesAsync();
+    }
+
+    public async Task RemoveDeviceToken(string token)
+    {
+        DeviceToken? existing = await _dbContext.DeviceTokens
+            .FirstOrDefaultAsync(d => d.Token == token);
+
+        if (existing != null)
+        {
+            _dbContext.DeviceTokens.Remove(existing);
+            await _dbContext.SaveChangesAsync();
+        }
     }
 
     public async Task MarkAsRead(Guid notificationId, Guid userId)

@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public virtual DbSet<ActivityLog> ActivityLogs { get; set; }
     public virtual DbSet<UserProfile> UserProfiles { get; set; }
     public virtual DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
+    public virtual DbSet<DeviceToken> DeviceTokens { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -74,6 +75,16 @@ public class AppDbContext : DbContext
         {
             entity.HasOne(e => e.User)
                   .WithMany(u => u.PasswordResetTokens)
+                  .HasForeignKey(e => e.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DeviceToken>(entity =>
+        {
+            entity.HasIndex(e => e.Token).IsUnique();
+
+            entity.HasOne(e => e.User)
+                  .WithMany(u => u.DeviceTokens)
                   .HasForeignKey(e => e.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
         });

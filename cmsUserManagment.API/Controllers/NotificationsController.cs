@@ -76,4 +76,24 @@ public class NotificationsController(
         await _notificationService.DeleteNotification(id, userId);
         return NoContent();
     }
+
+    /// <summary>Registers (or refreshes) the current user's Expo push token for this device.</summary>
+    [HttpPost("device-token")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> RegisterDeviceToken([FromBody] RegisterDeviceTokenRequest request)
+    {
+        string token = _headersManager.GetJwtFromHeader(Request.Headers);
+        Guid userId = _jwtDecoder.GetUserid(token);
+        await _notificationService.RegisterDeviceToken(userId, request.Token, request.Platform);
+        return NoContent();
+    }
+
+    /// <summary>Removes a device push token (e.g. on logout).</summary>
+    [HttpDelete("device-token")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> RemoveDeviceToken([FromBody] RegisterDeviceTokenRequest request)
+    {
+        await _notificationService.RemoveDeviceToken(request.Token);
+        return NoContent();
+    }
 }
